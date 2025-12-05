@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Suspense, useState } from 'react';
 import { client } from '@/lib/apollo-client';
+import { SmoothScrollManager } from '@/components/smooth-scroll-manager';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </div>
           }
         >
+          <SmoothScrollManager />
           {children}
         </Suspense>
         <ReactQueryDevtools initialIsOpen={false} />
