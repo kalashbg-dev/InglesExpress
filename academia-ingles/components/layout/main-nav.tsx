@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
+import { handleSmoothScroll } from "@/lib/scroll";
 
 export function MainNav() {
   const pathname = usePathname();
@@ -38,6 +39,11 @@ export function MainNav() {
                 pathname === link.href ? "text-primary" : "text-gray-600"
               )}
               aria-current={pathname === link.href ? "page" : undefined}
+              onClick={(e) => {
+                if (link.href.startsWith('#')) {
+                  handleSmoothScroll(e, link.href);
+                }
+              }}
             >
               {link.label}
               {link.children && <ChevronDown className="h-4 w-4" />}
@@ -52,6 +58,11 @@ export function MainNav() {
                       <Link
                         href={child.href}
                         className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary rounded-md"
+                        onClick={(e) => {
+                          if (child.href.startsWith('#')) {
+                            handleSmoothScroll(e, child.href);
+                          }
+                        }}
                       >
                         {child.label}
                       </Link>

@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Logo } from "./logo";
+import { handleSmoothScroll } from "@/lib/scroll";
 
 export function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,7 +66,12 @@ export function MobileNav() {
                       <Link
                         href={link.href}
                         className="block py-2 text-lg font-medium text-foreground hover:text-primary transition-colors border-b border-border/50"
-                        onClick={() => setIsOpen(false)}
+                        onClick={(e) => {
+                          setIsOpen(false);
+                          if (link.href.startsWith('#')) {
+                            handleSmoothScroll(e, link.href);
+                          }
+                        }}
                       >
                         {link.label}
                       </Link>
