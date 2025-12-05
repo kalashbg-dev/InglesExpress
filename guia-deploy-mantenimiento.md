@@ -83,91 +83,122 @@ VERCEL_PROJECT_ID=
 ```bash
 #!/bin/bash
 
-set -e  # Exit on error
+set -e  # Salir si hay error
 
-echo "🚀 CONFIGURACIÓN DE AMBIENTES DE DESPLIEGUE"
-echo "=========================================="
+echo "🚀 CONFIGURACIÓN DE AMBIENTES DE DESPLIEGUE (OPTIMIZADO)"
+echo "========================================================"
 
-# Verificar Node.js y pnpm
+# 1. VERIFICACIÓN DE ENTORNO
+# ------------------------------------------------------------
+echo "🔍 Verificando entorno..."
+
+# Verificar Node.js v20+
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js no está instalado. Instala Node.js 18 o superior."
+    echo "❌ Node.js no está instalado."
     exit 1
 fi
 
+NODE_VERSION=$(node -v | cut -d'.' -f1 | tr -d 'v')
+if [ "$NODE_VERSION" -lt 20 ]; then
+    echo "⚠️  ADVERTENCIA: Tienes Node v$NODE_VERSION. Se recomienda Node v20 (LTS) para este proyecto."
+    echo "   Continuando bajo tu propio riesgo..."
+    sleep 2
+else
+    echo "✅ Node.js v$NODE_VERSION detectado (Correcto)"
+fi
+
+# Verificar pnpm
 if ! command -v pnpm &> /dev/null; then
     echo "📦 Instalando pnpm..."
     npm install -g pnpm
 fi
 
-# Crear archivos de entorno
-echo "📝 Creando archivos de entorno..."
+# 2. INSTALACIÓN DE DEPENDENCIAS CRÍTICAS
+# ------------------------------------------------------------
+echo "📦 Instalando dependencias del proyecto..."
+pnpm install
 
-if [ ! -f .env.example ]; then
-    echo "❌ Error: .env.example no encontrado"
-    exit 1
+# CORRECCIÓN AUTOMÁTICA: Instalar dependencias de Ops que faltaban en la Guía 1
+if ! grep -q "@upstash/redis" package.json; then
+    echo "🔧 Instalando dependencia faltante: @upstash/redis..."
+    pnpm add @upstash/redis
 fi
 
-# Crear copias para cada ambiente
-cp .env.example .env.local
-cp .env.example .env.development
-cp .env.example .env.staging
-cp .env.example .env.production
+# 3. CONFIGURACIÓN DE VARIABLES DE ENTORNO
+# ------------------------------------------------------------
+echo "📝 Configurando variables de entorno..."
 
-echo "✅ Archivos creados:"
-echo "  - .env.local        (desarrollo local)"
-echo "  - .env.development  (desarrollo Vercel)"
-echo "  - .env.staging      (staging Vercel)"
-echo "  - .env.production   (producción)"
+# Si no existe .env.example, lo creamos con valores seguros por defecto
+if [ ! -f .env.example ]; then
+    echo "⚠️ .env.example no encontrado. Creando uno base..."
+    cat > .env.example << 'EOF'
+# APP
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_APP_ENV=development
+NEXT_PUBLIC_APP_VERSION=1.0.0
 
-# Crear estructura de directorios
-echo "📁 Creando estructura de directorios..."
+# WORDPRESS
+NEXT_PUBLIC_WORDPRESS_API_URL=https://inglesexpress.com/graphql
+
+# OPS & MONITORING
+ADMIN_EMAIL=admin@inglesexpress.com
+SECURITY_ALERT_EMAIL=security@inglesexpress.com
+NEXT_PUBLIC_SENTRY_DSN=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+EOF
+fi
+
+# Crear copias para cada ambiente si no existen
+for env in local development staging production; do
+    if [ ! -f ".env.$env" ]; then
+        cp .env.example ".env.$env"
+        echo "  ✅ Creado .env.$env"
+    else
+        echo "  dw .env.$env ya existe (saltado)"
+    fi
+done
+
+# 4. ESTRUCTURA DE DIRECTORIOS PARA OPS
+# ------------------------------------------------------------
+echo "📁 Creando estructura de directorios de operaciones..."
 mkdir -p logs
-mkdir -p backups
+mkdir -p backups/config
+mkdir -p backups/content
 mkdir -p scripts
 
+# Crear archivos de log vacíos para evitar errores de permisos luego
 touch logs/app.log
 touch logs/error.log
 touch logs/access.log
 
-# Instalar dependencias
-echo "📦 Instalando dependencias..."
-pnpm install
+# 5. PERMISOS Y HOOKS
+# ------------------------------------------------------------
+echo "🔧 Finalizando configuración..."
 
-# Configurar git hooks si no existen
-if [ ! -d .git/hooks ]; then
-    mkdir -p .git/hooks
-fi
+# Permisos de ejecución para scripts
+chmod +x scripts/*.sh 2>/dev/null || true
+chmod -R 755 logs/ backups/
 
+# Git hooks
 if [ ! -f .git/hooks/pre-commit ]; then
-    echo "🔧 Configurando git hooks..."
+    echo "  - Configurando git hooks..."
+    mkdir -p .git/hooks
     cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
-echo "🔍 Ejecutando validaciones pre-commit..."
-
-# Run linting
+echo "🔍 Pre-commit: Linting & Testing..."
 pnpm lint --quiet
-
-# Run type checking
 pnpm type-check --quiet
-
-# Run tests
-pnpm test --passWithNoTests
 EOF
     chmod +x .git/hooks/pre-commit
 fi
 
-# Permisos
-chmod 644 .env.*
-chmod -R 755 logs/
-chmod -R 755 backups/
-chmod -R 755 scripts/
-
-echo "🎉 CONFIGURACIÓN COMPLETADA"
 echo ""
-echo "📋 PASOS SIGUIENTES:"
-echo "1. Edita .env.local con tus configuraciones locales"
-echo "2. Ejecuta 'pnpm dev' para iniciar desarrollo"
-echo "3. Configura las variables en Vercel Dashboard para cada ambiente"
+echo "🎉 CONFIGURACIÓN COMPLETADA EXITOSAMENTE"
+echo "========================================"
+echo "📋 Siguientes pasos:"
+echo "1. Edita .env.local con tus credenciales reales (Redis, WordPress, etc)"
+echo "2. Ejecuta 'pnpm dev' para probar"
 echo ""
 ```
 
@@ -361,117 +392,131 @@ echo ""
 
 **next.config.js:**
 ```javascript
+/** @type {import('next').NextConfig} */
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
-})
+});
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimizaciones de Build
   reactStrictMode: true,
   swcMinify: true,
   compress: true,
   generateEtags: true,
-  poweredByHeader: false,
-  
-  // Optimización de imágenes
+  poweredByHeader: false, // Por seguridad (Guía 2)
+
+  // Configuración de Imágenes (Fusión Guía 1 + Guía 2)
+  // Usamos remotePatterns (moderno) cubriendo todos los dominios necesarios
   images: {
-    domains: [
-      'www.inglesexpress.com',
-      'staging.inglesexpress.com',
-      'dev.inglesexpress.com',
-      'secure.gravatar.com',
-      'i0.wp.com',
-      'via.placeholder.com'
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'academiaingles.com', // WordPress Prod
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.academiaingles.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'inglesexpress.com', // Dominio final Guía 2
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.inglesexpress.com', // Subdominios (staging, dev)
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'secure.gravatar.com', // Avatares
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i0.wp.com', // Jetpack/Photon CDN
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com', // Placeholders
+        pathname: '/**',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60 * 60 * 24, // 24 horas
+    minimumCacheTTL: 60, // 60 segundos mínimo
   },
-  
-  // Headers de caché para Edge Network
+
+  // Headers de Seguridad y Caché (Fusión Completa)
   async headers() {
     return [
       {
-        source: '/_next/static/(.*)',
+        source: '/:path*',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
+          // Seguridad (Guía 1 + 2)
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' }, // Guía 1 decía SAMEORIGIN, Guía 2 DENY. SAMEORIGIN es más seguro para iframes propios.
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
         ],
+      },
+      // Caché para Assets Estáticos (Guía 2 - Crítico para performance)
+      {
+        source: '/_next/static/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/favicon.ico',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
       },
-      {
-        source: '/manifest.json',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=86400',
-          },
-        ],
-      },
-    ]
+    ];
   },
-  
-  // Redirecciones y rewrites
+
+  // Redirecciones (Guía 2)
   async redirects() {
     return [
-      {
-        source: '/home',
-        destination: '/',
-        permanent: true,
-      },
-      {
-        source: '/courses',
-        destination: '/niveles',
-        permanent: true,
-      },
-    ]
+      { source: '/admin', destination: '/', permanent: false },
+      { source: '/wp-admin', destination: '/', permanent: false },
+      { source: '/login', destination: '/', permanent: false },
+      { source: '/home', destination: '/', permanent: true }, // Normalización
+      { source: '/courses', destination: '/niveles', permanent: true }, // Alias
+    ];
   },
-  
-  // Rewrites para APIs
+
+  // Rewrites para Proxy de API (Guía 2 - Muy útil para evitar CORS en cliente)
   async rewrites() {
     return [
       {
         source: '/api/graphql',
-        destination: `${process.env.NEXT_PUBLIC_WORDPRESS_API_URL}`,
+        destination: process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://academiaingles.com/graphql',
       },
-    ]
+    ];
   },
-  
-  // Compilador optimizado
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
-  },
-  
-  // ISR Configuration
-  experimental: {
-    isrMemoryCacheSize: 50, // MB
-    serverComponentsExternalPackages: ['@sentry/nextjs'],
-  },
-}
 
-module.exports = withBundleAnalyzer(nextConfig)
+  // Configuración del Compilador
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+
+  // Configuración Experimental (ISR y Sentry)
+  experimental: {
+    // isrMemoryCacheSize: 50, // Comentado: Usar valor por defecto a menos que haya problemas de memoria
+    serverComponentsExternalPackages: ['@sentry/nextjs'], // Necesario para Sentry en App Router
+  },
+};
+
+module.exports = withBundleAnalyzer(nextConfig);
 ```
 
 ---

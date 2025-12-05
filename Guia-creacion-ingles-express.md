@@ -3247,14 +3247,25 @@ export function NewsletterForm() {
 
 ```javascript
 /** @type {import('next').NextConfig} */
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
+  // Optimizaciones de Build
   reactStrictMode: true,
   swcMinify: true,
+  compress: true,
+  generateEtags: true,
+  poweredByHeader: false, // Por seguridad (Guía 2)
+
+  // Configuración de Imágenes (Fusión Guía 1 + Guía 2)
+  // Usamos remotePatterns (moderno) cubriendo todos los dominios necesarios
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'academiaingles.com', // Tu dominio de WordPress
+        hostname: 'academiaingles.com', // WordPress Prod
         pathname: '/**',
       },
       {
@@ -3264,96 +3275,102 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'secure.gravatar.com',
+        hostname: 'inglesexpress.com', // Dominio final Guía 2
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: '*.academiaingles.com', // Subdominios
+        hostname: '*.inglesexpress.com', // Subdominios (staging, dev)
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'secure.gravatar.com', // Avatares
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i0.wp.com', // Jetpack/Photon CDN
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com', // Placeholders
         pathname: '/**',
       },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
+    minimumCacheTTL: 60, // 60 segundos mínimo
   },
-  
-  // Security headers
+
+  // Headers de Seguridad y Caché (Fusión Completa)
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-          },
+          // Seguridad (Guía 1 + 2)
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' }, // Guía 1 decía SAMEORIGIN, Guía 2 DENY. SAMEORIGIN es más seguro para iframes propios.
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
         ],
       },
+      // Caché para Assets Estáticos (Guía 2 - Crítico para performance)
+      {
+        source: '/_next/static/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/static/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/favicon.ico',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
     ];
   },
-  
-  // Redirects
+
+  // Redirecciones (Guía 2)
   async redirects() {
     return [
+      { source: '/admin', destination: '/', permanent: false },
+      { source: '/wp-admin', destination: '/', permanent: false },
+      { source: '/login', destination: '/', permanent: false },
+      { source: '/home', destination: '/', permanent: true }, // Normalización
+      { source: '/courses', destination: '/niveles', permanent: true }, // Alias
+    ];
+  },
+
+  // Rewrites para Proxy de API (Guía 2 - Muy útil para evitar CORS en cliente)
+  async rewrites() {
+    return [
       {
-        source: '/admin',
-        destination: '/',
-        permanent: false,
-      },
-      {
-        source: '/wp-admin',
-        destination: '/',
-        permanent: false,
-      },
-      {
-        source: '/wp-login.php',
-        destination: '/',
-        permanent: false,
+        source: '/api/graphql',
+        destination: process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://inglesexpress.com/graphql',
       },
     ];
   },
-  
-  // Environment variables
-  env: {
-    SITE_VERSION: '1.0.0',
-  },
-  
-  // Compiler options
+
+  // Configuración del Compilador
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-  
-  // Powered by header
-  poweredByHeader: false,
+
+  // Configuración Experimental (ISR y Sentry)
+  experimental: {
+    // isrMemoryCacheSize: 50, // Comentado: Usar valor por defecto a menos que haya problemas de memoria
+    serverComponentsExternalPackages: ['@sentry/nextjs'], // Necesario para Sentry en App Router
+  },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
 ```
 
 ### **Paso 4.4.3: Configurar Middleware para Seguridad**
@@ -3429,6 +3446,68 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };
+```
+
+## **MÓDULO 4.5: PREPARACIÓN PARA OPERACIONES Y DEPLOY (BRIDGE)**
+
+Antes de pasar a la guía de despliegue, debemos preparar la infraestructura local para que soporte los scripts de mantenimiento y la monitorización avanzada que configuraremos más adelante.
+
+### **Paso 4.5.1: Instalación de Dependencias de Operaciones**
+
+La guía de despliegue utiliza Redis para una estrategia de caché multinivel y herramientas de análisis que no instalamos al inicio.
+
+```bash
+# 1. Instalar cliente de Redis (necesario para caché avanzado y rate limiting)
+pnpm add @upstash/redis
+
+# 2. Instalar analizador de bundles (para optimización de build)
+pnpm add -D @next/bundle-analyzer
+
+# 3. Instalar cross-env para scripts de mantenimiento (compatibilidad Windows/Linux)
+pnpm add -D cross-env
+```
+
+### **Paso 4.5.2: Estandarización de Variables de Entorno**
+
+Necesitamos alinear nuestro archivo `.env.local` actual con lo que exigirá el sistema de despliegue profesional.
+
+**Actualiza tu archivo `.env.local` agregando estas variables al final:**
+
+```env
+# ============================================
+# BRIDGE CONFIGURATION (Requerido para Guía de Despliegue)
+# ============================================
+# Identificación de ambiente
+NEXT_PUBLIC_APP_ENV=local
+NEXT_PUBLIC_APP_VERSION=1.0.0
+
+# Emails administrativos (para alertas del sistema)
+ADMIN_EMAIL=admin@inglesexpress.com
+SECURITY_ALERT_EMAIL=security@inglesexpress.com
+
+# Redis (Dejar vacío por ahora, se configurará en Vercel)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+### **Paso 4.5.3: Creación de Estructura de Operaciones**
+
+Los scripts de mantenimiento y backups automatizados de la siguiente fase requieren carpetas específicas que Next.js no crea por defecto.
+
+**Ejecuta estos comandos en la raíz del proyecto para crear la estructura:**
+
+```bash
+# 1. Carpetas para logs y auditoría
+mkdir -p logs
+touch logs/.gitkeep
+
+# 2. Carpetas para backups automatizados
+mkdir -p backups/config
+mkdir -p backups/content
+touch backups/.gitkeep
+
+# 3. Carpeta para scripts de automatización (DevOps)
+mkdir -p scripts
 ```
 
 ---
