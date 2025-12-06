@@ -1984,9 +1984,14 @@ if [ -d "public/images" ]; then
     npx @squoosh/cli --webp 'public/images/*.{jpg,png}' 2>/dev/null || true
 fi
 
-# 4. Generar sitemap
-log "🗺️ Generando sitemap..."
-curl -s -X GET "https://inglesexpress.com/api/generate-sitemap" > /dev/null
+# 4. Verificar sitemap (Next.js App Router lo genera automáticamente)
+log "🗺️ Verificando sitemap..."
+SITEMAP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://inglesexpress.com/sitemap.xml")
+if [ "$SITEMAP_STATUS" = "200" ]; then
+    log "✅ Sitemap accesible"
+else
+    log "⚠️ Error verificando sitemap: $SITEMAP_STATUS"
+fi
 
 # 5. Test de rendimiento
 log "⚡ Ejecutando test de rendimiento..."
@@ -2743,7 +2748,6 @@ echo ""
 BASE_URL="${BASE_URL:-https://inglesexpress.com}"
 HEALTH_ENDPOINT="$BASE_URL/api/health"
 CACHE_CLEAR_ENDPOINT="$BASE_URL/api/cache/clear"
-SITEMAP_ENDPOINT="$BASE_URL/api/generate-sitemap"
 MAX_RETRIES=5
 RETRY_DELAY=10
 
@@ -2795,16 +2799,7 @@ else
     echo "⚠️ Cache clear may have failed: $CACHE_RESPONSE"
 fi
 
-# 3. Generate sitemap
-echo "🗺️ Generando sitemap..."
-SITEMAP_RESPONSE=$(make_request "$SITEMAP_ENDPOINT")
-if echo "$SITEMAP_RESPONSE" | grep -q "success" || [ -z "$SITEMAP_RESPONSE" ]; then
-    echo "✅ Sitemap generated"
-else
-    echo "⚠️ Sitemap generation may have failed: $SITEMAP_RESPONSE"
-fi
-
-# 4. Warm up cache para páginas críticas
+# 3. Warm up cache para páginas críticas
 echo "🔥 Calentando cache para páginas críticas..."
 CRITICAL_PAGES=(
     "/"
@@ -2828,6 +2823,7 @@ IMPORTANT_PAGES=(
     "/api/health"
     "/sitemap.xml"
     "/robots.txt"
+    "/manifest.json"
     "/favicon.ico"
 )
 
@@ -2870,7 +2866,7 @@ $(date '+%Y-%m-%d %H:%M:%S') | DEPLOYMENT
   User: ${GITHUB_ACTOR:-$USER}
   Health Check: ✅ Passed
   Cache Cleared: ✅
-  Sitemap Generated: ✅
+  PWA/SEO Files: ✅
 EOF
 
 echo ""
@@ -2878,7 +2874,7 @@ echo "✅ POST-DEPLOYMENT COMPLETADO"
 echo "📊 Resumen:"
 echo "  - Health check: ✅"
 echo "  - Cache cleared: ✅"
-echo "  - Sitemap generated: ✅"
+echo "  - PWA/SEO Verified: ✅"
 echo "  - Cache warmed: ${#CRITICAL_PAGES[@]} páginas"
 echo "  - Monitoring notified: ✅"
 echo ""

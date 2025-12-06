@@ -3512,6 +3512,213 @@ mkdir -p scripts
 
 ---
 
+## **MÓDULO 4.6: IMPLEMENTACIÓN DE PWA Y SEO TÉCNICO**
+
+### **Paso 4.6.1: Instalación de Dependencias PWA**
+
+Para convertir la aplicación en una Progressive Web App (PWA) instalable y offline-first, usaremos una librería optimizada para App Router.
+
+```bash
+pnpm add @ducanh2912/next-pwa
+```
+
+### **Paso 4.6.2: Configuración de Archivos Técnicos SEO**
+
+Next.js 16 permite generar archivos técnicos dinámicamente usando código TypeScript.
+
+**ARCHIVO: `app/manifest.ts` (Configuración PWA):**
+
+```typescript
+import { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Academia de Inglés - Aprende en 4 Meses',
+    short_name: 'Academia Inglés',
+    description: 'Aprende inglés rápido y efectivo con nuestra metodología garantizada.',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#E63946', // Rojo de la marca
+    icons: [
+      {
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+  };
+}
+```
+
+**ARCHIVO: `app/sitemap.ts` (Mapa del sitio automático):**
+
+```typescript
+import { MetadataRoute } from 'next';
+import { client } from '@/lib/apollo-client';
+import { gql } from '@apollo/client';
+
+const GET_ALL_SLUGS = gql`
+  query GetAllSlugs {
+    niveles(first: 100) {
+      nodes {
+        slug
+        modified
+      }
+    }
+    posts(first: 100) {
+      nodes {
+        slug
+        modified
+      }
+    }
+  }
+`;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://academiaingles.com';
+
+  // Obtener datos dinámicos
+  let nivelesLines: any[] = [];
+  try {
+    const { data } = await client.query({
+      query: GET_ALL_SLUGS,
+      fetchPolicy: 'no-cache' // Siempre datos frescos para sitemap
+    });
+
+    nivelesLines = data.niveles.nodes.map((nivel: any) => ({
+      url: `${baseUrl}/niveles/${nivel.slug}`,
+      lastModified: new Date(nivel.modified),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    }));
+  } catch (error) {
+    console.error('Error generando sitemap:', error);
+  }
+
+  // Rutas estáticas
+  const staticRoutes = [
+    '',
+    '/niveles',
+    '/metodologia',
+    '/contacto',
+    '/blog',
+  ].map((route) => ({
+    url: `${baseUrl}${route}`,
+    lastModified: new Date(),
+    changeFrequency: 'daily' as const,
+    priority: route === '' ? 1 : 0.8,
+  }));
+
+  return [...staticRoutes, ...nivelesLines];
+}
+```
+
+**ARCHIVO: `app/robots.ts` (Control de robots):**
+
+```typescript
+import { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://academiaingles.com';
+
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: ['/admin/', '/wp-admin/', '/private/'],
+    },
+    sitemap: `${baseUrl}/sitemap.xml`,
+  };
+}
+```
+
+### **Paso 4.6.3: Actualización de Configuración Next.js**
+
+Actualizamos `next.config.js` para integrar PWA.
+
+**ARCHIVO: `next.config.js` (Actualizado con PWA):**
+
+```javascript
+/** @type {import('next').NextConfig} */
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  swcMinify: true,
+  disable: process.env.NODE_ENV === 'development', // Desactivar en desarrollo
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
+
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+const nextConfig = {
+  // Optimizaciones de Build
+  reactStrictMode: true,
+  compress: true,
+  poweredByHeader: false,
+
+  // Configuración de Imágenes
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'academiaingles.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.academiaingles.com',
+        pathname: '/**',
+      },
+      // ... otros dominios ...
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
+
+  // Headers de Seguridad
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+    ];
+  },
+
+  // ... redirects y rewrites ...
+};
+
+module.exports = withBundleAnalyzer(withPWA(nextConfig));
+```
+
+### **Paso 4.6.4: Preparación de Assets**
+
+**Debes crear/añadir estos iconos en la carpeta `public/icons/`:**
+1. `icon-192x192.png`
+2. `icon-512x512.png`
+3. `apple-icon.png` (en raíz `public/`)
+
+---
+
 # **PARTE 5: DEPLOYMENT FINAL Y VERIFICACIÓN**
 
 ## **MÓDULO 5.1: DESPLIEGUE EN VERCEL**
