@@ -525,6 +525,8 @@ module.exports = withBundleAnalyzer(nextConfig);
 
 ### **3.1 Configuración de Sentry para Error Tracking**
 
+> **NOTA IMPORTANTE:** En Next.js 16 (App Router), la inicialización de Sentry se gestiona principalmente a través del archivo `instrumentation.ts` en la raíz del proyecto, además de los archivos de configuración tradicionales. Este archivo ya ha sido creado por el agente. Asegúrate de revisarlo.
+
 **sentry.client.config.js:**
 ```javascript
 import * as Sentry from "@sentry/nextjs";
@@ -2289,14 +2291,14 @@ vercel logs --follow
 ### Mantenimiento
 ```bash
 # Ejecutar mantenimiento completo
-./scripts/maintenance.sh
+pnpm run maintenance
 
 # Backup manual
-./scripts/backup-config.sh
-./scripts/backup-content.sh
+pnpm run backup:config
+pnpm run backup:content
 
 # Restauración
-./scripts/restore.sh
+pnpm run restore
 ```
 
 ## 🚨 Procedimientos de Emergencia
