@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { Inter, Montserrat } from 'next/font/google';
+import { Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { SkipLink } from '@/components/layout/skip-link';
 import { Announcement } from '@/components/layout/announcement';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -121,6 +123,9 @@ export default function RootLayout({
         {/* Add any other preloads here */}
       </head>
       <body className="min-h-screen bg-white font-sans text-gray-900 antialiased">
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         <SkipLink />
         <Announcement />
         <Providers>
