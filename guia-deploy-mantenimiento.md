@@ -525,6 +525,26 @@ module.exports = withBundleAnalyzer(nextConfig);
 
 ### **3.1 Configuración de Sentry para Error Tracking**
 
+**IMPORTANTE (Next.js 16+):**
+Para que Sentry funcione correctamente en las versiones modernas de Next.js, hemos implementado el archivo `instrumentation.ts` en la raíz del proyecto. Este archivo actúa como el punto de entrada para cargar las configuraciones de servidor y edge.
+
+**instrumentation.ts:**
+```typescript
+import * as Sentry from "@sentry/nextjs";
+
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+  }
+}
+
+export const onRequestError = Sentry.captureRequestError;
+```
+
 **sentry.client.config.js:**
 ```javascript
 import * as Sentry from "@sentry/nextjs";
@@ -1950,6 +1970,20 @@ async function checkDiskSpace(): Promise<HealthCheck> {
 
 ### **5.4 Script de Mantenimiento Automatizado**
 
+> **NOTA:** Todos los scripts de mantenimiento han sido implementados como scripts de Bash (`.sh`) en la carpeta `scripts/` y mapeados en `package.json` para ser ejecutados con `pnpm run [nombre-comando]`.
+
+**Mapeo de Comandos en package.json:**
+```json
+"scripts": {
+  "verify:production": "bash scripts/post-deploy.sh",
+  "verify:security": "pnpm run security:check",
+  "backup:config": "bash scripts/backup-config.sh",
+  "backup:content": "bash scripts/backup-content.sh",
+  "restore": "bash scripts/restore.sh",
+  "maintenance": "bash scripts/maintenance.sh"
+}
+```
+
 **scripts/maintenance.sh:**
 ```bash
 #!/bin/bash
@@ -2289,14 +2323,17 @@ vercel logs --follow
 ### Mantenimiento
 ```bash
 # Ejecutar mantenimiento completo
-./scripts/maintenance.sh
+pnpm run maintenance
 
 # Backup manual
-./scripts/backup-config.sh
-./scripts/backup-content.sh
+pnpm run backup:config
+pnpm run backup:content
+
+# Backup completo (config + contenido)
+pnpm run backup:full
 
 # Restauración
-./scripts/restore.sh
+pnpm run restore
 ```
 
 ## 🚨 Procedimientos de Emergencia

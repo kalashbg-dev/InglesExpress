@@ -1304,7 +1304,7 @@ Requerido: Sí
 **CAMPO 6: Descripción Corta**
 ```
 Etiqueta del campo: Descripción Corta
-Nombre del campo: descripcion_corta
+Nombre del campo: descripcion
 Tipo de campo: Textarea
 Líneas máximas: 3
 Requerido: No
@@ -1741,6 +1741,11 @@ chmod +x verify-backend.sh
 ---
 
 # **PARTE 4: INTEGRACIÓN FRONTEND-BACKEND CON ANTIGRAVITY/VS CODE**
+
+> **✅ NOTA: ARCHIVOS YA GENERADOS**
+> Gran parte de la infraestructura de esta sección (Apollo Client, Queries, Hooks, Tipos y Validación) ya ha sido generada por el agente para facilitar la integración.
+>
+> **Antes de crear archivos nuevos**, verifica si ya existen en las carpetas `lib/`, `hooks/` y `types/`. Si existen, úsalos como base en lugar de sobrescribirlos.
 
 ## **MÓDULO 4.1: CONFIGURACIÓN DEL PROYECTO PARA INTEGRACIÓN**
 
@@ -3243,7 +3248,10 @@ export function NewsletterForm() {
 
 ### **Paso 4.4.2: Configurar Next.js para Imágenes Externas**
 
-**ARCHIVO: `next.config.js` (final):**
+> **⚠️ IMPORTANTE: ESTE PASO YA HA SIDO REALIZADO.**
+> El archivo `next.config.js` actual ya incluye esta configuración junto con soporte avanzado para PWA (`next-pwa`), monitoreo (`Sentry`) y análisis de bundles. **NO SOBRESCRIBAS** el archivo existente con el código de abajo a menos que sepas lo que haces.
+
+**ARCHIVO: `next.config.js` (Referencia de configuración básica):**
 
 ```javascript
 /** @type {import('next').NextConfig} */
