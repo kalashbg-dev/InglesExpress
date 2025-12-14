@@ -1301,9 +1301,9 @@ Texto de ayuda: URL de checkout de Stripe
 Requerido: Sí
 ```
 
-**CAMPO 6: Descripción Corta**
+**CAMPO 6: Descripción**
 ```
-Etiqueta del campo: Descripción Corta
+Etiqueta del campo: Descripción
 Nombre del campo: descripcion
 Tipo de campo: Textarea
 Líneas máximas: 3
@@ -1742,10 +1742,15 @@ chmod +x verify-backend.sh
 
 # **PARTE 4: INTEGRACIÓN FRONTEND-BACKEND CON ANTIGRAVITY/VS CODE**
 
-> **✅ NOTA: ARCHIVOS YA GENERADOS**
-> Gran parte de la infraestructura de esta sección (Apollo Client, Queries, Hooks, Tipos y Validación) ya ha sido generada por el agente para facilitar la integración.
+> **NOTA IMPORTANTE:** Gran parte del código de esta sección (Apollo Client, Queries, Hooks, Types) **YA HA SIDO CREADO** por el agente para facilitar la integración.
 >
-> **Antes de crear archivos nuevos**, verifica si ya existen en las carpetas `lib/`, `hooks/` y `types/`. Si existen, úsalos como base en lugar de sobrescribirlos.
+> **Archivos ya existentes:**
+> - `lib/apollo-client.ts`
+> - `lib/queries.ts` (¡Ojo! Este archivo espera un campo `descripcion` en ACF, no `descripcion_corta`)
+> - `hooks/useLevels.ts`
+> - `types/index.ts`
+>
+> Tu trabajo será verificar que estos archivos existen y conectar el WordPress para que cumpla con los requisitos definidos en ellos.
 
 ## **MÓDULO 4.1: CONFIGURACIÓN DEL PROYECTO PARA INTEGRACIÓN**
 
@@ -4111,19 +4116,22 @@ TOTAL: ___/80 ✅
     "deploy:production": "vercel --prod",
     "deploy": "pnpm run type-check && pnpm run lint && pnpm run test && pnpm run security:check && pnpm run build",
     
-    "verify:local": "node scripts/verify-local.js",
-    "verify:production": "node scripts/verify-production.js",
-    "verify:security": "node scripts/verify-security.js",
+    "verify:local": "echo 'Not implemented'",
+    "verify:production": "bash scripts/post-deploy.sh",
+    "verify:security": "pnpm run security:check",
     
-    "backup:database": "node scripts/backup-database.js",
-    "backup:wordpress": "node scripts/backup-wordpress.js",
+    "backup:config": "bash scripts/backup-config.sh",
+    "backup:content": "bash scripts/backup-content.sh",
+    "backup:full": "pnpm run backup:config && pnpm run backup:content",
+    "restore": "bash scripts/restore.sh",
+    "maintenance": "bash scripts/maintenance.sh",
     
-    "monitor:performance": "node scripts/monitor-performance.js",
-    "monitor:errors": "node scripts/monitor-errors.js",
-    "monitor:uptime": "node scripts/monitor-uptime.js",
+    "monitor:performance": "echo 'Use Vercel Analytics'",
+    "monitor:errors": "echo 'Use Sentry Dashboard'",
+    "monitor:uptime": "echo 'Use UptimeRobot'",
     
-    "generate:sitemap": "node scripts/generate-sitemap.js",
-    "generate:robots": "node scripts/generate-robots.js",
+    "generate:sitemap": "echo 'Handled by Next.js App Router'",
+    "generate:robots": "echo 'Handled by Next.js App Router'",
     
     "clean": "rm -rf .next node_modules",
     "reset": "pnpm run clean && pnpm install && pnpm run build",
