@@ -5,6 +5,7 @@ import { gql } from '@apollo/client';
 import { client } from '@/lib/apollo-client';
 import { FAQ } from '@/types';
 import { validateFAQs } from '@/lib/validation';
+import { MOCK_FAQS } from '@/lib/mock-data';
 
 const GET_FAQS_QUERY = gql`
   query GetFAQsForHook {
@@ -29,6 +30,13 @@ const GET_FAQS_QUERY = gql`
 `;
 
 const fetchFAQs = async (): Promise<FAQ[]> => {
+  // Check for Mock Mode
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+    console.log('Using Mock Data for FAQs');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return MOCK_FAQS;
+  }
+
   try {
     const { data } = await client.query({
       query: GET_FAQS_QUERY,

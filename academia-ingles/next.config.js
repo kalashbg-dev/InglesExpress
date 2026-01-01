@@ -23,9 +23,6 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
 
-  // Disable Turbopack error if using webpack plugins (like PWA)
-  turbopack: false,
-
   // Configuración de Imágenes
   images: {
     remotePatterns: [

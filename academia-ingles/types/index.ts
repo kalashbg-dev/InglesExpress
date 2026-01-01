@@ -46,7 +46,7 @@ export interface FAQ {
   content: string;
   excerpt?: string;
   infoFAQ?: {
-    categoria: 'académico' | 'administrativo';
+    categoria: 'academic' | 'administrative';
   };
 }
 
