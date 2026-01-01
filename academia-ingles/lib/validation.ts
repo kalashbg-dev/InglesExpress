@@ -50,7 +50,7 @@ export const faqSchema = z.object({
   content: z.string().min(1, 'Content is required'),
   excerpt: z.string().optional(),
   infoFAQ: z.object({
-    categoria: z.enum(['académico', 'administrativo']),
+    categoria: z.enum(['academic', 'administrative']),
   }).optional(),
 });
 

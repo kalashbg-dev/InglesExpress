@@ -5,6 +5,7 @@ import { gql } from '@apollo/client';
 import { client } from '@/lib/apollo-client';
 import { Level } from '@/types';
 import { validateLevels } from '@/lib/validation';
+import { MOCK_LEVELS } from '@/lib/mock-data';
 
 // GraphQL query
 const GET_LEVELS_QUERY = gql`
@@ -42,6 +43,14 @@ const GET_LEVELS_QUERY = gql`
 
 // Fetch function
 const fetchLevels = async (): Promise<Level[]> => {
+  // Check for Mock Mode
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+    console.log('Using Mock Data for Levels');
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return MOCK_LEVELS;
+  }
+
   try {
     const { data } = await client.query({
       query: GET_LEVELS_QUERY,
@@ -49,17 +58,11 @@ const fetchLevels = async (): Promise<Level[]> => {
     });
 
     if (!data?.niveles?.nodes) {
-      // Return empty array instead of throwing if no levels found,
-      // or throw if it's an error.
-      // For now, let's assume empty array is valid but we want to know if it failed.
-      // If we are developing without backend, this will fail.
-      // We should return mock data if backend fails in dev mode?
-      // User said "ready for backend", so it should try to connect.
-      // If connection fails, it throws.
       throw new Error('No levels data received');
     }
 
     // Transform WordPress data to our format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const transformedLevels = data.niveles.nodes.map((node: any) => ({
       id: node.databaseId,
       databaseId: node.databaseId,
@@ -84,8 +87,6 @@ const fetchLevels = async (): Promise<Level[]> => {
     return validateLevels(transformedLevels);
   } catch (error) {
     console.error('Error fetching levels:', error);
-    // In a real scenario, we might want to return mock data if env is dev
-    // For now, rethrow
     throw error;
   }
 };
@@ -107,6 +108,14 @@ export const useLevel = (slug: string) => {
   return useQuery({
     queryKey: ['level', slug],
     queryFn: async () => {
+      // Mock Data Support
+      if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+         await new Promise(resolve => setTimeout(resolve, 500));
+         const level = MOCK_LEVELS.find(l => l.slug === slug);
+         if (!level) throw new Error('Level not found in mock data');
+         return level;
+      }
+
       const { data } = await client.query({
         query: gql`
           query GetLevel($slug: ID!) {
