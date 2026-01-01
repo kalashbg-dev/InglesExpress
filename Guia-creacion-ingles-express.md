@@ -92,6 +92,11 @@ NEXT_PUBLIC_WORDPRESS_URL=https://tu-dominio-wordpress.com
 NEXT_PUBLIC_WORDPRESS_PREVIEW_SECRET=tu-secreto-aqui-123
 
 # ============================================
+# MOCK MODE (Set to true to run without Backend)
+# ============================================
+NEXT_PUBLIC_USE_MOCK_DATA=true
+
+# ============================================
 # STRIPE (SOLO CLAVES PÚBLICAS - NUNCA SECRETAS)
 # ============================================
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC123XYZ789
@@ -135,6 +140,11 @@ NEXT_PUBLIC_SENTRY_DSN=https://abc123@sentry.io/456789
 NEXT_PUBLIC_WORDPRESS_API_URL=https://tu-dominio-wordpress.com/graphql
 NEXT_PUBLIC_WORDPRESS_URL=https://tu-dominio-wordpress.com
 NEXT_PUBLIC_WORDPRESS_PREVIEW_SECRET=tu-secreto-aqui-123
+
+# ============================================
+# MOCK MODE
+# ============================================
+NEXT_PUBLIC_USE_MOCK_DATA=false
 
 # ============================================
 # STRIPE
@@ -1351,7 +1361,7 @@ Título del grupo: Info FAQ
 Etiqueta del campo: Categoría
 Nombre del campo: categoria
 Tipo de campo: Select
-Opciones: académico : Académico, administrativo : Administrativo
+Opciones: academic : Académico, administrative : Administrativo
 Requerido: Sí
 ```
 

@@ -72,6 +72,7 @@ SECURITY_ALERT_EMAIL=security@inglesexpress.com
 # ============================================
 NEXT_PUBLIC_APP_ENV=development
 NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_USE_MOCK_DATA=false
 VERCEL_TOKEN=
 VERCEL_ORG_ID=
 VERCEL_PROJECT_ID=
@@ -136,6 +137,7 @@ if [ ! -f .env.example ]; then
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_APP_ENV=development
 NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_USE_MOCK_DATA=false
 
 # WORDPRESS
 NEXT_PUBLIC_WORDPRESS_API_URL=https://inglesexpress.com/graphql
